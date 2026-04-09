@@ -16,9 +16,9 @@ env/
 .env
 *.env
 
-# Model artefacts (generated — not committed)
-models/*.pkl
-models/*.json
+# Model artefacts are committed so Railway doesn't need to retrain at build time
+# models/*.pkl
+# models/*.json
 
 # Logs
 logs/

@@ -1,0 +1,62 @@
+{
+  "model_name": "Ridge(alpha=1)",
+  "training_rows": 800,
+  "test_rows": 200,
+  "features": [
+    "location",
+    "bedrooms",
+    "bathrooms",
+    "accommodates",
+    "has_wifi",
+    "has_pool",
+    "has_ac",
+    "has_kitchen",
+    "has_parking"
+  ],
+  "cv_folds": 5,
+  "cv_results": {
+    "LinearRegression": {
+      "cv_r2_mean": 0.6254,
+      "cv_r2_std": 0.0621,
+      "cv_mae_mean": 18.9865,
+      "cv_rmse_mean": 24.1166,
+      "fit_time_s": 0.06
+    },
+    "Ridge(alpha=1)": {
+      "cv_r2_mean": 0.6255,
+      "cv_r2_std": 0.062,
+      "cv_mae_mean": 18.9872,
+      "cv_rmse_mean": 24.1124,
+      "fit_time_s": 0.06
+    },
+    "Ridge(alpha=10)": {
+      "cv_r2_mean": 0.6255,
+      "cv_r2_std": 0.0605,
+      "cv_mae_mean": 19.0304,
+      "cv_rmse_mean": 24.1211,
+      "fit_time_s": 0.05
+    },
+    "RandomForest": {
+      "cv_r2_mean": 0.5226,
+      "cv_r2_std": 0.0435,
+      "cv_mae_mean": 21.8149,
+      "cv_rmse_mean": 27.3422,
+      "fit_time_s": 0.89
+    },
+    "XGBoost": {
+      "cv_r2_mean": 0.4901,
+      "cv_r2_std": 0.0555,
+      "cv_mae_mean": 22.262,
+      "cv_rmse_mean": 28.2284,
+      "fit_time_s": 2.3
+    }
+  },
+  "test_metrics": {
+    "mae": 18.6378,
+    "rmse": 23.3276,
+    "r2": 0.6898,
+    "mape": 9.6523
+  },
+  "feature_importance": null,
+  "model_path": "/Users/ruggudile/Desktop/Projects/jamaican-airbnb-price-estimator/AirBnb Price Predictor/models/pipeline.pkl"
+}

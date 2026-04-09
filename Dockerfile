@@ -30,9 +30,6 @@ COPY --from=builder /install /usr/local
 # Copy application code
 COPY --chown=appuser:appuser . .
 
-# Train the model at build time so the image ships with a ready artefact
-RUN python -m ml.train
-
 # Switch to non-root
 USER appuser
 
