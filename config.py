@@ -32,9 +32,10 @@ TEST_SIZE = 0.2
 CV_FOLDS = 5
 
 # ── API ────────────────────────────────────────────────────────────────────────
+import os
 API_VERSION = "v1"
 API_HOST = "0.0.0.0"
-API_PORT = 5001
+API_PORT = int(os.environ.get("PORT", 5001))
 DEBUG = False
 
 # ── Logging ────────────────────────────────────────────────────────────────────
