@@ -30,6 +30,9 @@ COPY --from=builder /install /usr/local
 # Copy application code
 COPY --chown=appuser:appuser . .
 
+# Create writable directories for logs and models before switching user
+RUN mkdir -p /app/logs /app/models && chown -R appuser:appuser /app/logs /app/models
+
 # Switch to non-root
 USER appuser
 

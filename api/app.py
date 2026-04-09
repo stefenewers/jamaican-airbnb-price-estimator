@@ -25,17 +25,20 @@ def configure_logging(app: Flask) -> None:
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
 
-    # file handler
-    log_file = LOGS_DIR / "api.log"
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(formatter)
-
     # Apply to root logger so all modules inherit it
     root = logging.getLogger()
     root.setLevel(level)
     root.handlers.clear()
     root.addHandler(stream_handler)
-    root.addHandler(file_handler)
+
+    # File handler — optional, skipped if directory isn't writable (e.g. Railway)
+    try:
+        log_file = LOGS_DIR / "api.log"
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(formatter)
+        root.addHandler(file_handler)
+    except OSError:
+        pass  # stdout-only logging is fine for cloud deployments
 
     app.logger.setLevel(level)
 
