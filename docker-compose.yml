@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: airbnb-price-predictor:latest
+    container_name: airbnb-predictor-api
+    ports:
+      - "5000:5000"
+    volumes:
+      # Persist model artefacts and logs outside the container
+      - ./models:/app/models
+      - ./logs:/app/logs
+    environment:
+      - LOG_LEVEL=INFO
+      - DEBUG=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/v1/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

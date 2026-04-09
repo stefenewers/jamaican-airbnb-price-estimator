@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jamaica Airbnb Price Predictor — Stefen Ewers</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #009B77;
+      --green-dark: #007a5e;
+      --gold:       #F5A623;
+      --black:      #1a1a1a;
+      --gray-100:   #f7f7f7;
+      --gray-200:   #ebebeb;
+      --gray-400:   #9b9b9b;
+      --gray-600:   #555;
+      --white:      #ffffff;
+      --radius:     10px;
+      --shadow:     0 4px 24px rgba(0,0,0,0.09);
+      --transition: 0.18s ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-100);
+      color: var(--black);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────────── */
+    header {
+      background: var(--black);
+      color: var(--white);
+      padding: 18px 32px 0;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 16px;
+    }
+    .flag { font-size: 26px; }
+    .header-title h1 { font-size: 1.15rem; font-weight: 700; }
+    .header-title p  { font-size: 0.75rem; color: var(--gray-400); margin-top: 2px; }
+    .badge {
+      margin-left: auto;
+      background: var(--green);
+      color: white;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* ── Tab nav ──────────────────────────────────────────────────────────── */
+    .tab-nav {
+      display: flex;
+      gap: 0;
+      margin-top: 4px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--gray-400);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: color var(--transition), border-color var(--transition);
+      letter-spacing: 0.02em;
+    }
+    .tab-btn:hover { color: var(--white); }
+    .tab-btn.active {
+      color: var(--white);
+      border-bottom-color: var(--green);
+    }
+
+    /* ── Tab panels ───────────────────────────────────────────────────────── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* ESTIMATOR TAB                                                          */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    #tab-estimator {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 24px;
+      max-width: 1040px;
+      width: 100%;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+    #tab-estimator.active { display: grid; }
+
+    @media (max-width: 768px) {
+      #tab-estimator { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 28px 24px;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-400);
+      margin-bottom: 20px;
+    }
+
+    /* Form */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.78rem; font-weight: 600; color: var(--gray-600); }
+    select, input[type="number"] {
+      appearance: none;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.9rem;
+      color: var(--black);
+      background: var(--white);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      width: 100%;
+    }
+    select:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(0,155,119,0.12);
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239b9b9b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    /* Amenity toggles */
+    .amenities-label { font-size: 0.78rem; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; grid-column: 1 / -1; }
+    .amenities { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+    .toggle {
+      display: flex; align-items: center; gap: 7px; cursor: pointer; user-select: none;
+      border: 1.5px solid var(--gray-200); border-radius: 8px; padding: 7px 12px;
+      font-size: 0.83rem; font-weight: 500; color: var(--gray-600);
+      transition: all var(--transition); background: var(--white);
+    }
+    .toggle input { display: none; }
+    .toggle-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--gray-200); flex-shrink: 0; transition: all var(--transition); }
+    .toggle.active { border-color: var(--green); background: rgba(0,155,119,0.06); color: var(--green-dark); }
+    .toggle.active .toggle-dot { background: var(--green); border-color: var(--green); }
+
+    /* Button */
+    .btn {
+      margin-top: 22px; width: 100%; padding: 13px;
+      background: var(--black); color: var(--white); border: none;
+      border-radius: var(--radius); font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; transition: background var(--transition), transform var(--transition);
+      letter-spacing: 0.02em; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn:hover { background: #333; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { background: var(--gray-400); cursor: not-allowed; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-text { opacity: 0.7; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result panel */
+    .result-card { display: flex; flex-direction: column; gap: 20px; }
+    .price-display { text-align: center; padding: 32px 16px; background: var(--black); border-radius: var(--radius); color: white; }
+    .price-display.hidden { display: none; }
+    .price-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gray-400); margin-bottom: 8px; }
+    .price-amount { font-size: 3rem; font-weight: 800; color: var(--gold); line-height: 1; letter-spacing: -0.02em; }
+    .price-unit { font-size: 0.78rem; color: var(--gray-400); margin-top: 6px; }
+    .price-model { font-size: 0.7rem; color: var(--gray-400); margin-top: 10px; }
+    .placeholder { text-align: center; padding: 48px 16px; color: var(--gray-400); }
+    .placeholder-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .placeholder p { font-size: 0.85rem; line-height: 1.5; }
+
+    /* Range bar */
+    .range-section { display: none; }
+    .range-section.visible { display: block; }
+    .range-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-400); margin-bottom: 12px; }
+    .range-bar-wrap { background: var(--gray-200); border-radius: 99px; height: 8px; position: relative; margin-bottom: 6px; }
+    .range-bar-fill { position: absolute; left: 0; top: 0; height: 8px; background: linear-gradient(90deg, var(--green), var(--gold)); border-radius: 99px; transition: width 0.5s ease; }
+    .range-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--gray-400); }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-box { background: var(--gray-100); border-radius: 8px; padding: 12px 14px; }
+    .stat-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-400); font-weight: 700; margin-bottom: 4px; }
+    .stat-value { font-size: 1.1rem; font-weight: 800; color: var(--black); }
+
+    /* API code block */
+    .api-section { grid-column: 1 / -1; }
+    .code-block { background: #1e1e2e; border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; position: relative; }
+    .code-block pre { font-family: "SF Mono", "Fira Code", Consolas, monospace; font-size: 0.78rem; color: #cdd6f4; white-space: pre; line-height: 1.6; }
+    .code-kw  { color: #89b4fa; }
+    .code-str { color: #a6e3a1; }
+    .code-num { color: #fab387; }
+    .copy-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); color: #cdd6f4; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: background var(--transition); }
+    .copy-btn:hover { background: rgba(255,255,255,0.12); }
+
+    /* Error */
+    .error-box { background: #fff1f1; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 12px 14px; font-size: 0.83rem; color: #b91c1c; display: none; }
+    .error-box.visible { display: block; }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* CASE STUDY TAB                                                         */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    #tab-case-study {
+      max-width: 820px;
+      margin: 40px auto;
+      padding: 0 24px 60px;
+    }
+    #tab-case-study.active { display: block; }
+
+    .cs-hero {
+      margin-bottom: 40px;
+    }
+    .cs-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--green);
+      margin-bottom: 10px;
+    }
+    .cs-hero h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+    .cs-hero p {
+      font-size: 1rem;
+      color: var(--gray-600);
+      line-height: 1.7;
+    }
+    .cs-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .cs-tag {
+      background: var(--gray-100);
+      border: 1.5px solid var(--gray-200);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--gray-600);
+    }
+
+    .cs-divider {
+      border: none;
+      border-top: 2px solid var(--green);
+      margin: 36px 0;
+      opacity: 0.25;
+    }
+
+    .cs-section {
+      margin-bottom: 48px;
+    }
+    .cs-section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--green);
+      margin-bottom: 10px;
+    }
+    .cs-section h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 14px;
+    }
+    .cs-section p {
+      font-size: 0.93rem;
+      color: var(--gray-600);
+      line-height: 1.75;
+      margin-bottom: 12px;
+    }
+    .cs-section p:last-child { margin-bottom: 0; }
+
+    /* Subsections */
+    .cs-subsection {
+      margin-top: 24px;
+    }
+    .cs-subsection h4 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 8px;
+    }
+
+    /* Tables */
+    .cs-table-wrap { overflow-x: auto; margin: 20px 0; }
+    .cs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.87rem;
+    }
+    .cs-table th {
+      background: var(--black);
+      color: var(--white);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .cs-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--gray-200);
+      color: var(--gray-600);
+      line-height: 1.5;
+    }
+    .cs-table tr:nth-child(even) td { background: var(--gray-100); }
+    .cs-table td:first-child { font-family: "SF Mono", "Fira Code", Consolas, monospace; font-size: 0.8rem; color: var(--green); font-weight: 700; }
+    .cs-table .winner td:first-child::after { content: " ★"; }
+    .cs-table .winner td { font-weight: 700; color: var(--black); }
+
+    /* Tech stack table — first col is plain text */
+    .cs-table.stack td:first-child { font-family: inherit; color: var(--black); font-weight: 700; font-size: 0.87rem; }
+
+    /* Code */
+    .cs-code {
+      background: #1e1e2e;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      overflow-x: auto;
+      margin: 16px 0;
+      position: relative;
+    }
+    .cs-code pre {
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 0.8rem;
+      color: #cdd6f4;
+      white-space: pre;
+      line-height: 1.6;
+    }
+    .cs-copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #cdd6f4;
+      font-size: 0.68rem;
+      padding: 3px 9px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .cs-copy-btn:hover { background: rgba(255,255,255,0.12); }
+
+    /* Bullet list */
+    .cs-list {
+      list-style: none;
+      margin: 12px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cs-list li {
+      padding-left: 20px;
+      position: relative;
+      font-size: 0.93rem;
+      color: var(--gray-600);
+      line-height: 1.65;
+    }
+    .cs-list li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+    .cs-list li strong { color: var(--black); }
+
+    /* Metrics highlight row */
+    .cs-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 20px 0;
+    }
+    @media (max-width: 600px) { .cs-metrics { grid-template-columns: repeat(2, 1fr); } }
+    .cs-metric {
+      background: var(--white);
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 16px 14px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .cs-metric-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-400);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .cs-metric-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--black);
+    }
+    .cs-metric-value.green { color: var(--green); }
+
+    /* Architecture diagram */
+    .cs-arch {
+      background: #1e1e2e;
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      margin: 16px 0;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 0.78rem;
+      color: #cdd6f4;
+      line-height: 1.8;
+    }
+    .cs-arch .arch-green  { color: #a6e3a1; }
+    .cs-arch .arch-blue   { color: #89b4fa; }
+    .cs-arch .arch-yellow { color: #f9e2af; }
+    .cs-arch .arch-pink   { color: #f38ba8; }
+
+    /* Next steps card */
+    .cs-next {
+      background: var(--black);
+      border-radius: var(--radius);
+      padding: 28px 28px 24px;
+      margin-top: 16px;
+    }
+    .cs-next h4 { font-size: 1rem; font-weight: 700; color: var(--white); margin-bottom: 16px; }
+    .cs-next ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .cs-next li { font-size: 0.88rem; color: var(--gray-400); padding-left: 22px; position: relative; line-height: 1.5; }
+    .cs-next li::before { content: "→"; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+    .cs-next li strong { color: var(--white); }
+
+    /* ── Footer ───────────────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 28px;
+      font-size: 0.75rem;
+      color: var(--gray-400);
+      margin-top: auto;
+      border-top: 1px solid var(--gray-200);
+    }
+    footer a { color: var(--green); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header + Tab Nav ──────────────────────────────────────────────────────── -->
+<header>
+  <div class="header-top">
+    <span class="flag">🇯🇲</span>
+    <div class="header-title">
+      <h1>Jamaica Airbnb Price Predictor</h1>
+      <p>ML-powered nightly rate prediction · Flask REST API · Docker</p>
+    </div>
+    <span class="badge">Live API</span>
+  </div>
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('estimator', this)">Estimator</button>
+    <button class="tab-btn" onclick="switchTab('case-study', this)">Case Study</button>
+  </nav>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- ESTIMATOR TAB                                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-estimator" class="tab-panel active">
+
+  <!-- Left: Form -->
+  <div class="card">
+    <div class="card-title">Property Details</div>
+    <form id="estimatorForm">
+      <div class="form-grid">
+
+        <div class="form-group full">
+          <label for="location">Location</label>
+          <select id="location" name="location" required>
+            <option value="">Select a parish / resort area</option>
+            <option value="Kingston">Kingston</option>
+            <option value="Montego Bay">Montego Bay</option>
+            <option value="Negril">Negril</option>
+            <option value="Ocho Rios">Ocho Rios</option>
+            <option value="Portland">Portland</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="bedrooms">Bedrooms</label>
+          <input type="number" id="bedrooms" min="1" max="10" value="2" required />
+        </div>
+
+        <div class="form-group">
+          <label for="bathrooms">Bathrooms</label>
+          <input type="number" id="bathrooms" min="1" max="10" value="1" required />
+        </div>
+
+        <div class="form-group full">
+          <label for="accommodates">Accommodates (guests)</label>
+          <input type="number" id="accommodates" min="1" max="16" value="4" required />
+        </div>
+
+        <div class="amenities-label">Amenities</div>
+        <div class="amenities">
+          <label class="toggle active">
+            <input type="checkbox" id="has_wifi" checked onchange="toggleAmenity(this)" />
+            <span class="toggle-dot"></span>WiFi
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="has_pool" onchange="toggleAmenity(this)" />
+            <span class="toggle-dot"></span>Pool
+          </label>
+          <label class="toggle active">
+            <input type="checkbox" id="has_ac" checked onchange="toggleAmenity(this)" />
+            <span class="toggle-dot"></span>A/C
+          </label>
+          <label class="toggle active">
+            <input type="checkbox" id="has_kitchen" checked onchange="toggleAmenity(this)" />
+            <span class="toggle-dot"></span>Kitchen
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="has_parking" onchange="toggleAmenity(this)" />
+            <span class="toggle-dot"></span>Parking
+          </label>
+        </div>
+
+      </div>
+      <button class="btn" type="submit" id="submitBtn">
+        <div class="spinner"></div>
+        <span class="btn-text">Estimate Price</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- Right: Results -->
+  <div class="result-card">
+    <div class="card">
+      <div class="price-display hidden" id="priceDisplay">
+        <div class="price-label">Estimated Nightly Rate</div>
+        <div class="price-amount" id="priceAmount">—</div>
+        <div class="price-unit">USD per night</div>
+        <div class="price-model" id="priceModel"></div>
+      </div>
+      <div class="placeholder" id="placeholder">
+        <div class="placeholder-icon">🏝️</div>
+        <p>Fill in your property details<br>and click <strong>Estimate Price</strong></p>
+      </div>
+      <div class="error-box" id="errorBox"></div>
+    </div>
+
+    <div class="card range-section" id="rangeSection">
+      <div class="range-title">Market Context</div>
+      <div class="range-bar-wrap">
+        <div class="range-bar-fill" id="rangeBar" style="width:0%"></div>
+      </div>
+      <div class="range-labels">
+        <span>$80 budget</span>
+        <span>$300 premium</span>
+      </div>
+    </div>
+
+    <div class="card" id="statsCard" style="display:none">
+      <div class="card-title">Breakdown</div>
+      <div class="stats-row" id="statsRow"></div>
+    </div>
+  </div>
+
+  <!-- Bottom: API snippet -->
+  <div class="card api-section">
+    <div class="card-title">REST API — Try It Yourself</div>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode()">Copy</button>
+      <pre id="codeSnippet"><span class="code-kw">curl</span> -X POST http://localhost:5000/api/v1/predict \
+  -H <span class="code-str">"Content-Type: application/json"</span> \
+  -d <span class="code-str">'{
+    "bedrooms": 2, "bathrooms": 1, "accommodates": 4,
+    "has_wifi": 1, "has_pool": 0, "has_ac": 1,
+    "has_kitchen": 1, "has_parking": 0, "location": "Negril"
+  }'</span></pre>
+    </div>
+  </div>
+
+</div><!-- /tab-estimator -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- CASE STUDY TAB                                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-case-study" class="tab-panel">
+
+  <!-- Hero -->
+  <div class="cs-hero">
+    <div class="cs-eyebrow">Case Study</div>
+    <h2>Jamaica Airbnb<br>Price Predictor</h2>
+    <p>An end-to-end ML regression service — from raw CSV to a production Flask REST API with custom feature engineering, cross-validated model selection, structured logging, and Docker deployment.</p>
+    <div class="cs-tags">
+      <span class="cs-tag">Python 3.11</span>
+      <span class="cs-tag">scikit-learn</span>
+      <span class="cs-tag">Ridge Regression</span>
+      <span class="cs-tag">Flask 3</span>
+      <span class="cs-tag">Docker</span>
+      <span class="cs-tag">pytest</span>
+      <span class="cs-tag">Regression</span>
+    </div>
+  </div>
+
+  <!-- Key numbers -->
+  <div class="cs-metrics">
+    <div class="cs-metric">
+      <div class="cs-metric-label">Test R²</div>
+      <div class="cs-metric-value green">0.69</div>
+    </div>
+    <div class="cs-metric">
+      <div class="cs-metric-label">Test MAE</div>
+      <div class="cs-metric-value">$18.64</div>
+    </div>
+    <div class="cs-metric">
+      <div class="cs-metric-label">CV Folds</div>
+      <div class="cs-metric-value">5</div>
+    </div>
+    <div class="cs-metric">
+      <div class="cs-metric-label">Latency</div>
+      <div class="cs-metric-value green">&lt;5ms</div>
+    </div>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- Overview -->
+  <div class="cs-section">
+    <div class="cs-section-title">01 — Overview</div>
+    <h3>The Problem</h3>
+    <p>Airbnb hosts in Jamaica — particularly in tourism-heavy markets like Montego Bay and Negril — frequently misprice their listings. Overpricing leads to low occupancy; underpricing leaves revenue on the table. A data-driven price recommendation system addresses this directly.</p>
+    <p>The model accepts nine property-level inputs and returns a predicted nightly rate in USD, along with model metadata and inference latency. The architecture is intentionally extensible: swapping the underlying model, adding features, or retargeting a different market requires touching a single file.</p>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- Architecture -->
+  <div class="cs-section">
+    <div class="cs-section-title">02 — Architecture</div>
+    <h3>Request Flow</h3>
+    <div class="cs-arch">
+<span class="arch-blue">POST /api/v1/predict</span>
+  └─ <span class="arch-green">InputValidator</span>          range/type checks → clean 422 on bad input
+  └─ <span class="arch-green">AmenityScoreTransformer</span>  weighted composite amenity feature
+  └─ <span class="arch-green">InteractionFeatures</span>     capacity_index, bath_ratio, guest_density
+  └─ <span class="arch-green">LocationEncoder</span>         aligned OHE — no train/serve skew
+  └─ <span class="arch-yellow">StandardScaler</span>
+  └─ <span class="arch-pink">XGBoost</span>                  → predicted price
+  └─ JSON response with latency_ms
+    </div>
+    <p>All preprocessing stages are composed into a single sklearn <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.85em">Pipeline</code> and serialised together with the model. There is no separate preprocessing script — the same transformation logic runs at training time and inference time, by construction.</p>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- Feature Engineering -->
+  <div class="cs-section">
+    <div class="cs-section-title">03 — Feature Engineering</div>
+    <h3>Beyond Raw Features</h3>
+    <p>The dataset provides nine inputs. Four engineered features are added via custom sklearn-compatible transformers before the model sees any data:</p>
+
+    <div class="cs-table-wrap">
+      <table class="cs-table">
+        <thead>
+          <tr><th>Feature</th><th>Formula</th><th>Rationale</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>amenity_score</td><td>Weighted sum of amenity flags</td><td>Pool (2×) and A/C (1.5×) command premiums in Jamaica's climate; composite avoids adding 5 sparse dimensions</td></tr>
+          <tr><td>capacity_index</td><td>accommodates ÷ bedrooms</td><td>Space efficiency — a 1-bed sleeps-6 villa is fundamentally different from a 1-bed studio</td></tr>
+          <tr><td>bath_ratio</td><td>bathrooms ÷ bedrooms</td><td>Luxury indicator — en-suite ratios correlate with premium positioning</td></tr>
+          <tr><td>guest_density</td><td>accommodates × amenity_score</td><td>Demand proxy × quality proxy — non-linear interaction the model would otherwise miss</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- Model Selection -->
+  <div class="cs-section">
+    <div class="cs-section-title">04 — Model Selection</div>
+    <h3>Cross-Validated Comparison</h3>
+    <p>Five candidates were evaluated via 5-fold cross-validation on the training set (80% of data). The best model by mean CV R² was re-fit on the full training split and evaluated on the held-out 20% test set.</p>
+
+    <div class="cs-table-wrap">
+      <table class="cs-table">
+        <thead>
+          <tr><th>Model</th><th>CV R² (mean ± std)</th><th>Test MAE</th><th>Test RMSE</th></tr>
+        </thead>
+        <tbody>
+          <tr class="winner"><td>Ridge (α=1)</td><td>0.626 ± 0.062</td><td>$18.64</td><td>$23.33</td></tr>
+          <tr><td>Ridge (α=10)</td><td>0.626 ± 0.061</td><td>—</td><td>—</td></tr>
+          <tr><td>LinearRegression</td><td>0.625 ± 0.062</td><td>—</td><td>—</td></tr>
+          <tr><td>RandomForest</td><td>0.523 ± 0.044</td><td>—</td><td>—</td></tr>
+          <tr><td>XGBoost</td><td>0.490 ± 0.056</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:12px;font-size:0.82rem;color:var(--gray-400)">★ Selected. The linear models outperforming tree-based ones is a direct signal that the underlying price relationships are roughly linear — Ridge captures the signal cleanly while RandomForest and XGBoost overfit to noise in the 1,000-row synthetic dataset. On real-world data with richer features, tree-based models would be expected to pull ahead.</p>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- API Design -->
+  <div class="cs-section">
+    <div class="cs-section-title">05 — API Design</div>
+    <h3>Production Flask REST API</h3>
+    <p>Built with Flask using the application factory pattern — the app instance is never in module scope, which makes testing and multiple configurations straightforward. Routes are versioned blueprints under <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.85em">/api/v1/</code>.</p>
+
+    <div class="cs-subsection">
+      <h4>Endpoints</h4>
+      <ul class="cs-list">
+        <li><strong>POST /api/v1/predict</strong> — single listing, full validation, returns price + latency metadata</li>
+        <li><strong>POST /api/v1/predict/batch</strong> — up to 100 listings per request</li>
+        <li><strong>GET /api/v1/health</strong> — liveness probe for Docker / load balancer health checks</li>
+        <li><strong>GET /api/v1/model-info</strong> — exposes training metadata, CV results, feature importances</li>
+      </ul>
+    </div>
+
+    <div class="cs-subsection">
+      <h4>Key Engineering Decisions</h4>
+      <ul class="cs-list">
+        <li><strong>Model caching:</strong> pipeline is loaded once via <code style="font-family:monospace;font-size:0.88em">@lru_cache(maxsize=1)</code> — zero I/O overhead after cold start</li>
+        <li><strong>Input validation:</strong> <code style="font-family:monospace;font-size:0.88em">InputValidator</code> raises <code style="font-family:monospace;font-size:0.88em">ValueError</code> on bad inputs, caught at route level, returned as 422</li>
+        <li><strong>Structured logging:</strong> every prediction logs location, bedrooms, price, and latency_ms at INFO; every validation error at WARNING</li>
+        <li><strong>Error taxonomy:</strong> 400 (bad JSON), 422 (validation), 503 (model not ready), 500 (unexpected) — all return JSON</li>
+      </ul>
+    </div>
+
+    <div class="cs-code">
+      <button class="cs-copy-btn" onclick="copyCs(this)">Copy</button>
+      <pre><span style="color:#6c7086"># Sample response from POST /api/v1/predict</span>
+{
+  <span style="color:#f38ba8">"predicted_price_usd"</span>: <span style="color:#fab387">187.43</span>,
+  <span style="color:#f38ba8">"currency"</span>: <span style="color:#a6e3a1">"USD"</span>,
+  <span style="color:#f38ba8">"unit"</span>: <span style="color:#a6e3a1">"per night"</span>,
+  <span style="color:#f38ba8">"model"</span>: <span style="color:#a6e3a1">"Ridge(alpha=1)"</span>,
+  <span style="color:#f38ba8">"latency_ms"</span>: <span style="color:#fab387">4.2</span>,
+  <span style="color:#f38ba8">"inputs"</span>: { <span style="color:#6c7086">...</span> }
+}</pre>
+    </div>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- Deployment -->
+  <div class="cs-section">
+    <div class="cs-section-title">06 — Deployment</div>
+    <h3>Docker + EC2</h3>
+    <p>The service uses a two-stage Docker build. The builder stage installs dependencies in isolation; the runtime stage copies only what's needed into a minimal <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.85em">python:3.11-slim</code> image.</p>
+    <ul class="cs-list">
+      <li><strong>Non-root execution:</strong> container runs as a dedicated <code style="font-family:monospace;font-size:0.88em">appuser</code> — no process runs as root</li>
+      <li><strong>Health check:</strong> Docker polls <code style="font-family:monospace;font-size:0.88em">/api/v1/health</code> every 30s; 3 failures mark the container unhealthy</li>
+      <li><strong>Production server:</strong> gunicorn with 2 workers — Flask's dev server never runs in production</li>
+      <li><strong>Model at build time:</strong> training runs during <code style="font-family:monospace;font-size:0.88em">docker build</code> — the image ships with a ready artefact, no separate seed step needed</li>
+    </ul>
+
+    <div class="cs-code">
+      <button class="cs-copy-btn" onclick="copyCs(this)">Copy</button>
+      <pre><span style="color:#89b4fa">docker-compose</span> up --build
+<span style="color:#6c7086"># Service available at http://localhost:5000</span></pre>
+    </div>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- Tech Stack -->
+  <div class="cs-section">
+    <div class="cs-section-title">07 — Stack</div>
+    <h3>Technical Stack</h3>
+    <div class="cs-table-wrap">
+      <table class="cs-table stack">
+        <thead><tr><th>Tool</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>Python 3.11</td><td>Core language</td></tr>
+          <tr><td>scikit-learn</td><td>Pipeline, transformers, model selection</td></tr>
+          <tr><td>Ridge Regression</td><td>Winning model — outperforms tree-based models on this linear dataset</td></tr>
+          <tr><td>Flask 3</td><td>REST API — app factory, versioned blueprints</td></tr>
+          <tr><td>gunicorn</td><td>Production WSGI server</td></tr>
+          <tr><td>Docker</td><td>Multi-stage build, non-root runtime, health checks</td></tr>
+          <tr><td>pytest</td><td>Unit + integration tests with coverage</td></tr>
+          <tr><td>joblib</td><td>Model serialisation</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- What's Next -->
+  <div class="cs-section">
+    <div class="cs-section-title">08 — What's Next</div>
+    <h3>Further Development</h3>
+    <div class="cs-next">
+      <h4>If I were taking this to production at scale:</h4>
+      <ul>
+        <li><strong>Real data:</strong> replace synthetic dataset with scraped or licensed listings — synthetic R² doesn't transfer to production accuracy</li>
+        <li><strong>Experiment tracking:</strong> MLflow or W&amp;B to persist every training run and make model selection reproducible</li>
+        <li><strong>SHAP explanations:</strong> <code style="font-family:monospace;font-size:0.85em">/api/v1/explain</code> endpoint returning per-feature SHAP values — hosts see which features drive their price</li>
+        <li><strong>CI/CD:</strong> GitHub Actions to run tests, build Docker image, push to ECR on every merge to main</li>
+        <li><strong>Drift monitoring:</strong> track prediction distribution over time to detect market shifts</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr class="cs-divider" />
+
+  <!-- Footer links -->
+  <div style="text-align:center;padding:8px 0 20px">
+    <p style="font-size:0.82rem;color:var(--gray-400)">
+      Built by <a href="https://www.stefenewers.com" target="_blank" style="color:var(--green);text-decoration:none;font-weight:600">Stefen Ewers</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/stefenewers" target="_blank" style="color:var(--green);text-decoration:none">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="https://www.linkedin.com/in/stefen-ewers/" target="_blank" style="color:var(--green);text-decoration:none">LinkedIn</a>
+    </p>
+  </div>
+
+</div><!-- /tab-case-study -->
+
+<footer>
+  Built by <a href="https://www.stefenewers.com" target="_blank">Stefen Ewers</a> ·
+  Flask + scikit-learn + XGBoost + Docker ·
+  <a href="https://github.com/stefenewers" target="_blank">GitHub</a>
+</footer>
+
+<script>
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── Amenity toggle UI ──────────────────────────────────────────────────────
+  function toggleAmenity(cb) {
+    cb.closest('.toggle').classList.toggle('active', cb.checked);
+  }
+
+  // ── Form submission ────────────────────────────────────────────────────────
+  document.getElementById('estimatorForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    clearError();
+
+    const payload = {
+      bedrooms:     parseInt(document.getElementById('bedrooms').value),
+      bathrooms:    parseInt(document.getElementById('bathrooms').value),
+      accommodates: parseInt(document.getElementById('accommodates').value),
+      has_wifi:     document.getElementById('has_wifi').checked ? 1 : 0,
+      has_pool:     document.getElementById('has_pool').checked ? 1 : 0,
+      has_ac:       document.getElementById('has_ac').checked ? 1 : 0,
+      has_kitchen:  document.getElementById('has_kitchen').checked ? 1 : 0,
+      has_parking:  document.getElementById('has_parking').checked ? 1 : 0,
+      location:     document.getElementById('location').value,
+    };
+
+    if (!payload.location) {
+      showError('Please select a location.');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/v1/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
+      showResult(data, payload);
+      updateCodeSnippet(payload);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  });
+
+  function showResult(data, payload) {
+    const price = data.predicted_price_usd;
+    document.getElementById('placeholder').style.display = 'none';
+    const display = document.getElementById('priceDisplay');
+    display.classList.remove('hidden');
+    animateValue('priceAmount', 0, price, 700, v => `$${v.toFixed(2)}`);
+    document.getElementById('priceModel').textContent = `Powered by ${data.model} · ${data.latency_ms}ms`;
+
+    const pct = Math.min(100, Math.max(0, ((price - 80) / 220) * 100));
+    document.getElementById('rangeSection').classList.add('visible');
+    setTimeout(() => { document.getElementById('rangeBar').style.width = pct + '%'; }, 100);
+
+    const amenityCount = ['has_wifi','has_pool','has_ac','has_kitchen','has_parking'].filter(k => payload[k]).length;
+    document.getElementById('statsCard').style.display = 'block';
+    document.getElementById('statsRow').innerHTML = `
+      <div class="stat-box"><div class="stat-label">Per Guest / Night</div><div class="stat-value">$${(price/payload.accommodates).toFixed(2)}</div></div>
+      <div class="stat-box"><div class="stat-label">Amenities</div><div class="stat-value">${amenityCount} / 5</div></div>
+      <div class="stat-box"><div class="stat-label">Weekly Rate</div><div class="stat-value">$${(price*7).toFixed(0)}</div></div>
+      <div class="stat-box"><div class="stat-label">Monthly Est.</div><div class="stat-value">$${(price*30).toFixed(0)}</div></div>
+    `;
+  }
+
+  function animateValue(id, start, end, duration, format) {
+    const el = document.getElementById(id);
+    const t0 = performance.now();
+    function tick(now) {
+      const t = Math.min((now - t0) / duration, 1);
+      el.textContent = format(start + (end - start) * (1 - Math.pow(1 - t, 3)));
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.textContent = '⚠️ ' + msg;
+    box.classList.add('visible');
+  }
+  function clearError() {
+    document.getElementById('errorBox').classList.remove('visible');
+  }
+
+  function updateCodeSnippet(p) {
+    document.getElementById('codeSnippet').innerHTML =
+`<span class="code-kw">curl</span> -X POST http://localhost:5000/api/v1/predict \\
+  -H <span class="code-str">"Content-Type: application/json"</span> \\
+  -d <span class="code-str">'{
+    "bedrooms": <span class="code-num">${p.bedrooms}</span>, "bathrooms": <span class="code-num">${p.bathrooms}</span>, "accommodates": <span class="code-num">${p.accommodates}</span>,
+    "has_wifi": <span class="code-num">${p.has_wifi}</span>, "has_pool": <span class="code-num">${p.has_pool}</span>, "has_ac": <span class="code-num">${p.has_ac}</span>,
+    "has_kitchen": <span class="code-num">${p.has_kitchen}</span>, "has_parking": <span class="code-num">${p.has_parking}</span>, "location": "${p.location}"
+  }'</span>`;
+  }
+
+  function copyCode() {
+    navigator.clipboard.writeText(document.getElementById('codeSnippet').innerText);
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  }
+
+  function copyCs(btn) {
+    const pre = btn.nextElementSibling;
+    navigator.clipboard.writeText(pre.innerText);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  }
+</script>
+</body>
+</html>
